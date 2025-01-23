@@ -46,6 +46,7 @@ dependencies {
     implementation (libs.firebase.database.v2010)
 
     implementation(libs.github.glide)
+    implementation(libs.volley)
     annotationProcessor(libs.glide.compiler)
 
 

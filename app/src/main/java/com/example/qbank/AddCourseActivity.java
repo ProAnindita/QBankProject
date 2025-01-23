@@ -1,9 +1,12 @@
 package com.example.qbank;
 
-import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
+import android.util.Base64;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -12,27 +15,37 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.firebase.database.DataSnapshot;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-import java.util.ArrayList;
-import java.util.List;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AddCourseActivity extends AppCompatActivity {
+
+    private static final String CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1/dp4ha5cws/image/upload";
+    private static final String CLOUDINARY_UPLOAD_PRESET = "ml_default";
 
     private EditText courseIdInput, courseNameInput, semesterInput;
     private Button addCourseButton;
     private ImageButton uploadButton;
-    private List<Uri> selectedImages = new ArrayList<>();
-    private ActivityResultLauncher<Intent> pickImagesLauncher;
+    private Uri selectedImageUri;
+    private String imageUrl;
 
     private DatabaseReference databaseReference;
+    private ActivityResultLauncher<Intent> pickImagesLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,41 +67,76 @@ public class AddCourseActivity extends AppCompatActivity {
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        if (result.getData().getClipData() != null) {
-                            int count = result.getData().getClipData().getItemCount();
-                            selectedImages.clear();
-                            for (int i = 0; i < count; i++) {
-                                Uri imageUri = result.getData().getClipData().getItemAt(i).getUri();
-                                selectedImages.add(imageUri);
-                            }
-                        } else if (result.getData().getData() != null) {
-                            Uri imageUri = result.getData().getData();
-                            selectedImages.clear();
-                            selectedImages.add(imageUri);
-                        }
+                        selectedImageUri = result.getData().getData();
 
-                        if (!selectedImages.isEmpty()) {
-                            uploadButton.setImageURI(selectedImages.get(0));
-                            Toast.makeText(this, selectedImages.size() + " images selected", Toast.LENGTH_SHORT).show();
+                        if (selectedImageUri != null) {
+                            uploadButton.setImageURI(selectedImageUri);
+                            Toast.makeText(this, "Image selected", Toast.LENGTH_SHORT).show();
                         }
                     }
                 }
         );
 
-        uploadButton.setOnClickListener(v -> openGalleryForMultipleImages());
+        uploadButton.setOnClickListener(v -> openGalleryForImage());
 
         // Add course button click listener
-        addCourseButton.setOnClickListener(v -> addCourseToFirebase());
+        addCourseButton.setOnClickListener(v -> {
+            if (selectedImageUri != null) {
+                uploadImageToCloudinary();
+            } else {
+                Toast.makeText(this, "Please select an image", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
-    private void openGalleryForMultipleImages() {
+    private void openGalleryForImage() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("image/*");
-        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-        pickImagesLauncher.launch(Intent.createChooser(intent, "Select Pictures"));
+        pickImagesLauncher.launch(Intent.createChooser(intent, "Select Image"));
     }
 
-    private void addCourseToFirebase() {
+    private void uploadImageToCloudinary() {
+        try {
+            Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), selectedImageUri);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+            byte[] byteArray = baos.toByteArray();
+            String base64Image = Base64.encodeToString(byteArray, Base64.DEFAULT);
+
+            Map<String, String> params = new HashMap<>();
+            params.put("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+            params.put("file", "data:image/jpeg;base64," + base64Image);
+
+            JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, CLOUDINARY_UPLOAD_URL, new JSONObject(params),
+                    response -> {
+                        try {
+                            imageUrl = response.getString("secure_url");
+                            Toast.makeText(this, "Image uploaded successfully!", Toast.LENGTH_SHORT).show();
+                            saveCourseToFirebase();
+                        } catch (Exception e) {
+                            Log.e("Cloudinary Response Error", e.getMessage(), e);
+                        }
+                    }, error -> {
+                if (error.networkResponse != null && error.networkResponse.data != null) {
+                    String errorMessage = new String(error.networkResponse.data);
+                    Log.e("Volley Error", error.networkResponse.statusCode + ": " + errorMessage);
+                } else {
+                    Log.e("Volley Error", "Unknown error occurred", error);
+                }
+                Toast.makeText(this, "Failed to upload image", Toast.LENGTH_SHORT).show();
+            });
+
+            RequestQueue requestQueue = Volley.newRequestQueue(this);
+            requestQueue.add(jsonObjectRequest);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.e("Bitmap Conversion Error", e.getMessage(), e);
+            Toast.makeText(this, "Error preparing image for upload", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void saveCourseToFirebase() {
         String courseId = courseIdInput.getText().toString().trim();
         String courseName = courseNameInput.getText().toString().trim();
         String semester = semesterInput.getText().toString().trim();
@@ -100,57 +148,33 @@ public class AddCourseActivity extends AppCompatActivity {
 
         DatabaseReference courseRef = databaseReference.child(courseId).child(semester);
 
-        // Check if the course already exists
         courseRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    // Course already exists, show dialog
-                    showEditDialog(courseId, semester, courseName);
-                } else {
-                    // Add new course
-                    saveCourseToDatabase(courseRef, courseName);
-                }
+            public void onDataChange(@NonNull com.google.firebase.database.DataSnapshot snapshot) {
+                courseRef.child("courseName").setValue(courseName);
+                courseRef.child("imageKey").setValue(imageUrl)
+                        .addOnCompleteListener(task -> {
+                            if (task.isSuccessful()) {
+                                Toast.makeText(AddCourseActivity.this, "Course added successfully", Toast.LENGTH_SHORT).show();
+                                resetFields();
+                            } else {
+                                Toast.makeText(AddCourseActivity.this, "Failed to add course", Toast.LENGTH_SHORT).show();
+                            }
+                        });
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(AddCourseActivity.this, "Error checking course existence", Toast.LENGTH_SHORT).show();
+                Toast.makeText(AddCourseActivity.this, "Error saving course", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private void saveCourseToDatabase(DatabaseReference courseRef, String courseName) {
-        courseRef.child("courseName").setValue(courseName);
-        courseRef.child("imageKey").setValue("")
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        Toast.makeText(this, "Course added successfully", Toast.LENGTH_SHORT).show();
-                        courseIdInput.setText("");
-                        courseNameInput.setText("");
-                        semesterInput.setText("");
-                    } else {
-                        Toast.makeText(this, "Failed to add course", Toast.LENGTH_SHORT).show();
-                    }
-                });
-    }
-
-    private void showEditDialog(String courseId, String semester, String currentCourseName) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Course Already Added")
-                .setMessage("The course is already added. Do you want to edit it?")
-                .setPositiveButton("Yes", (dialog, which) -> {
-                    // Edit the course
-                    DatabaseReference courseRef = databaseReference.child(courseId).child(semester);
-                    courseRef.child("courseName").setValue(currentCourseName)
-                            .addOnCompleteListener(task -> {
-                                if (task.isSuccessful()) {
-                                   // Toast.makeText(this, "Course updated successfully", Toast.LENGTH_SHORT).show();
-                                } else {
-                                    Toast.makeText(this, "Failed to update course", Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                })
-                .show();
+    private void resetFields() {
+        courseIdInput.setText("");
+        courseNameInput.setText("");
+        semesterInput.setText("");
+        uploadButton.setImageResource(R.drawable.ic_upload); // Reset to default icon
+        selectedImageUri = null;
     }
 }
