@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "825353020157",
+    "project_id": "qbank0",
+    "storage_bucket": "qbank0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:825353020157:android:dccedaa05bde300df89494",
+        "android_client_info": {
+          "package_name": "com.example.qbank"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDXes0_VO5XtOk8h1qifDgMS77jBcQDNSY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
