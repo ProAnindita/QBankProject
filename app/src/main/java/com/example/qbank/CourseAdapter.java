@@ -82,12 +82,19 @@ public class CourseAdapter extends ArrayAdapter<Course> {
                 return;
             }
 
-            if (!course.getCourseCode().equals(newCourseId)) {
-                databaseReference.child(course.getCourseCode()).removeValue();
+            // Reference to the old course node
+            DatabaseReference oldCourseRef = databaseReference.child(course.getCourseCode()).child(course.getSemester());
+
+            // Remove old course node if the course ID or semester is updated
+            if (!course.getCourseCode().equals(newCourseId) || !course.getSemester().equals(newSemester)) {
+                oldCourseRef.removeValue();
             }
 
-            Course updatedCourse = new Course(newCourseName, newCourseId, newSemester);
-            databaseReference.child(newCourseId).setValue(updatedCourse)
+            // Reference to the new course node
+            DatabaseReference newCourseRef = databaseReference.child(newCourseId).child(newSemester);
+
+            // Update the course in the database
+            newCourseRef.child("courseName").setValue(newCourseName)
                     .addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
                             Toast.makeText(getContext(), "Course updated successfully", Toast.LENGTH_SHORT).show();
@@ -100,6 +107,9 @@ public class CourseAdapter extends ArrayAdapter<Course> {
                             Toast.makeText(getContext(), "Failed to update course", Toast.LENGTH_SHORT).show();
                         }
                     });
+
+            // Add an empty imageKey to maintain consistency
+            newCourseRef.child("imageKey").setValue("");
         });
 
         quitButton.setOnClickListener(v -> dialog.dismiss());
@@ -115,16 +125,21 @@ public class CourseAdapter extends ArrayAdapter<Course> {
                         + "Course Name: " + course.getCourseName() + "\n"
                         + "Semester: " + course.getSemester())
                 .setPositiveButton("Yes", (dialog, which) -> {
-                    databaseReference.child(course.getCourseCode()).removeValue()
-                            .addOnCompleteListener(task -> {
-                                if (task.isSuccessful()) {
-                                    Toast.makeText(getContext(), "Course deleted successfully", Toast.LENGTH_SHORT).show();
-                                    remove(course);
-                                    notifyDataSetChanged();
-                                } else {
-                                    Toast.makeText(getContext(), "Failed to delete course", Toast.LENGTH_SHORT).show();
-                                }
-                            });
+                    // Reference to the specific semester's course
+                    DatabaseReference semesterRef = databaseReference
+                            .child(course.getCourseCode())
+                            .child(course.getSemester());
+
+                    // Remove the semester node
+                    semesterRef.removeValue().addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            Toast.makeText(getContext(), "Course for semester deleted successfully", Toast.LENGTH_SHORT).show();
+                            remove(course); // Remove the course from adapter
+                            notifyDataSetChanged(); // Refresh the ListView
+                        } else {
+                            Toast.makeText(getContext(), "Failed to delete course", Toast.LENGTH_SHORT).show();
+                        }
+                    });
                 })
                 .setNegativeButton("No", null)
                 .show();

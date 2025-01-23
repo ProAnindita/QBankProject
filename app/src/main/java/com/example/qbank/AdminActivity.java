@@ -1,12 +1,4 @@
 package com.example.qbank;
-import android.content.Intent;
-import android.net.Uri;
-import android.widget.ImageButton;
-import android.widget.Toast;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-import java.util.ArrayList;
-import java.util.List;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -31,15 +23,13 @@ import java.util.ArrayList;
 
 public class AdminActivity extends AppCompatActivity {
 
-    private EditText searchEditText, courseIdInput, courseNameInput, semesterInput;
-    private Button addCourseButton, adminSignOutButton;
+    private EditText searchEditText;
     private ListView courseListView;
+    private Button adminSignOutButton, goToAddCourseButton;
 
     private DatabaseReference databaseReference;
     private ArrayList<Course> courseList;
     private CourseAdapter courseAdapter;
-    private List<Uri> selectedImages = new ArrayList<>();
-    private ActivityResultLauncher<Intent> pickImagesLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,51 +44,15 @@ public class AdminActivity extends AppCompatActivity {
             return;
         }
         setContentView(R.layout.activity_admin);
-        ImageButton uploadButton = findViewById(R.id.uploadButton);
-
-// Initialize the launcher for picking multiple images
-        pickImagesLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        if (result.getData().getClipData() != null) {
-                            // Multiple images selected
-                            int count = result.getData().getClipData().getItemCount();
-                            selectedImages.clear();
-                            for (int i = 0; i < count; i++) {
-                                Uri imageUri = result.getData().getClipData().getItemAt(i).getUri();
-                                selectedImages.add(imageUri);
-                            }
-                        } else if (result.getData().getData() != null) {
-                            // Single image selected
-                            Uri imageUri = result.getData().getData();
-                            selectedImages.clear();
-                            selectedImages.add(imageUri);
-                        }
-
-                        // Update the ImageButton with the first selected image
-                        if (!selectedImages.isEmpty()) {
-                            uploadButton.setImageURI(selectedImages.get(0));
-                            Toast.makeText(this, selectedImages.size() + " images selected", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                }
-        );
-
-// Set the click listener for the upload button
-        uploadButton.setOnClickListener(v -> openGalleryForMultipleImages());
 
         // Initialize Firebase reference
         databaseReference = FirebaseDatabase.getInstance().getReference("Courses");
 
         // Initialize views
         searchEditText = findViewById(R.id.searchEditText);
-        courseIdInput = findViewById(R.id.courseIdInput);
-        courseNameInput = findViewById(R.id.courseNameInput);
-        semesterInput = findViewById(R.id.SemesterInput);
-        addCourseButton = findViewById(R.id.addCourseButton);
-        adminSignOutButton = findViewById(R.id.btnadminsignout);
         courseListView = findViewById(R.id.courseListView);
+        adminSignOutButton = findViewById(R.id.btnadminsignout);
+        goToAddCourseButton = findViewById(R.id.btnGoToAddCourse);
 
         // Initialize list and adapter
         courseList = new ArrayList<>();
@@ -107,31 +61,6 @@ public class AdminActivity extends AppCompatActivity {
 
         // Load all courses initially
         loadCoursesFromFirebase();
-
-        // Add course
-        addCourseButton.setOnClickListener(v -> {
-            String courseId = courseIdInput.getText().toString().trim();
-            String courseName = courseNameInput.getText().toString().trim();
-            String semester = semesterInput.getText().toString().trim();
-
-            if (courseId.isEmpty() || courseName.isEmpty() || semester.isEmpty()) {
-                Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            Course course = new Course(courseName, courseId, semester);
-            databaseReference.child(courseId).setValue(course)
-                    .addOnCompleteListener(task -> {
-                        if (task.isSuccessful()) {
-                            Toast.makeText(this, "Course added successfully", Toast.LENGTH_SHORT).show();
-                            courseIdInput.setText("");
-                            courseNameInput.setText("");
-                            semesterInput.setText("");
-                        } else {
-                            Toast.makeText(this, "Failed to add course", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-        });
 
         // Add search functionality
         searchEditText.addTextChangedListener(new TextWatcher() {
@@ -147,6 +76,12 @@ public class AdminActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {}
         });
 
+        // Navigate to AddCourseActivity
+        goToAddCourseButton.setOnClickListener(v -> {
+            Intent intent = new Intent(AdminActivity.this, AddCourseActivity.class);
+            startActivity(intent);
+        });
+
         // Admin sign-out
         adminSignOutButton.setOnClickListener(v -> {
             SharedPreferences.Editor editor = sharedPreferences.edit();
@@ -158,12 +93,6 @@ public class AdminActivity extends AppCompatActivity {
             finish();
         });
     }
-    private void openGalleryForMultipleImages() {
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("image/*");
-        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-        pickImagesLauncher.launch(Intent.createChooser(intent, "Select Pictures"));
-    }
 
     private void loadCoursesFromFirebase() {
         databaseReference.addValueEventListener(new ValueEventListener() {
@@ -171,9 +100,15 @@ public class AdminActivity extends AppCompatActivity {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 courseList.clear();
                 for (DataSnapshot courseSnapshot : snapshot.getChildren()) {
-                    Course course = courseSnapshot.getValue(Course.class);
-                    if (course != null) {
-                        courseList.add(course);
+                    String courseId = courseSnapshot.getKey();
+                    for (DataSnapshot semesterSnapshot : courseSnapshot.getChildren()) {
+                        String semester = semesterSnapshot.getKey();
+                        Course course = semesterSnapshot.getValue(Course.class);
+                        if (course != null) {
+                            course.setCourseCode(courseId);
+                            course.setSemester(semester);
+                            courseList.add(course);
+                        }
                     }
                 }
                 courseAdapter.notifyDataSetChanged();
