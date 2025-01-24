@@ -26,6 +26,16 @@
             android:layout_marginBottom="10dp"
             android:textStyle="bold"
             android:text="Welcom to QBank"/>
+        <TextView
+            android:id="@+id/std_email"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="15sp"
+            android:textAlignment="center"
+            android:textColor="@color/colorPrimaryDark"
+            android:layout_gravity="center"
+            android:layout_marginBottom="10dp"
+            android:text="emailaddress"/>
 
         <EditText
             android:id="@+id/et_std_search"

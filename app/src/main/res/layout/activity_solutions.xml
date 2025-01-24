@@ -1,0 +1,31 @@
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="30sp"
+        android:textAlignment="center"
+        android:textColor="@color/colorPrimaryDark"
+        android:layout_gravity="center"
+        android:layout_marginBottom="10dp"
+        android:textStyle="bold"
+        android:text="Solutions"/>
+    <EditText
+        android:id="@+id/searchSolutionsInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Search solutions by email"
+        android:padding="8dp"
+        android:background="@drawable/search_edit_text_bg" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/solutionsRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="8dp"
+        android:clipToPadding="false" />
+</LinearLayout>

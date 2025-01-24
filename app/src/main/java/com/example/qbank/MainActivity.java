@@ -112,10 +112,11 @@ public class MainActivity extends AppCompatActivity {
                     if (task.isSuccessful()) {
                         FirebaseUser user = mAuth.getCurrentUser();
                         if (user != null && user.isEmailVerified()) {
-                            // Save user login state
+                            // Save user login state and email
                             SharedPreferences sharedPreferences = getSharedPreferences("MyAppPrefs", MODE_PRIVATE);
                             SharedPreferences.Editor editor = sharedPreferences.edit();
                             editor.putBoolean("isLoggedIn", true);
+                            editor.putString("userEmail", email); // Save user email
                             editor.apply();
 
                             Toast.makeText(MainActivity.this, "Sign-In Successful!", Toast.LENGTH_SHORT).show();
