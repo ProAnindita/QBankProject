@@ -37,6 +37,7 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,7 @@ public class CourseAdapter extends ArrayAdapter<Course> {
 
     private static final String CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1/dp4ha5cws/image/upload";
     private static final String CLOUDINARY_UPLOAD_PRESET = "ml_default";
+    private ArrayList<Course> courseList;
 
     private DatabaseReference databaseReference;
     private Context context;
@@ -256,6 +258,11 @@ public class CourseAdapter extends ArrayAdapter<Course> {
         quitButton.setOnClickListener(v -> dialog.dismiss());
 
         dialog.show();
+    }
+    public void updateCourses(ArrayList<Course> updatedCourses) {
+        this.courseList.clear();
+        this.courseList.addAll(updatedCourses);
+        notifyDataSetChanged();
     }
 
     private void openGalleryForImage() {

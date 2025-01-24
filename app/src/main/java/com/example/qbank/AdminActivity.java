@@ -122,15 +122,19 @@ public class AdminActivity extends AppCompatActivity {
     }
 
     private void filterCourses(String query) {
-        ArrayList<Course> filteredList = new ArrayList<>();
+        ArrayList<Course> filteredCourses = new ArrayList<>();
+
         for (Course course : courseList) {
-            if (course.getCourseCode().toLowerCase().contains(query.toLowerCase()) ||
-                    course.getCourseName().toLowerCase().contains(query.toLowerCase()) ||
-                    course.getSemester().toLowerCase().contains(query.toLowerCase())) {
-                filteredList.add(course);
+            if (course.getCourseName().toLowerCase().contains(query.toLowerCase()) ||
+                    course.getCourseCode().toLowerCase().contains(query.toLowerCase())) {
+                filteredCourses.add(course);
             }
         }
-        courseAdapter = new CourseAdapter(AdminActivity.this, filteredList);
+
+        // Update the adapter with the filtered list
+        courseAdapter = new CourseAdapter(this, filteredCourses);
         courseListView.setAdapter(courseAdapter);
+        courseAdapter.notifyDataSetChanged();
     }
+
 }

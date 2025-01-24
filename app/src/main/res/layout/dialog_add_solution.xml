@@ -15,8 +15,35 @@
         android:textSize="16sp"
         android:textColor="@color/colorPrimaryDark"
         android:layout_marginBottom="16dp" />
+    <TextView
+        android:id="@+id/sl_courseId"
+        android:layout_gravity="center"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="course id"
+        android:textSize="16sp"
+        android:textColor="@color/textSecondary"
+         />
+    <TextView
+        android:id="@+id/sl_coursename"
+        android:layout_gravity="center"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="course name"
+        android:textSize="16sp"
+        android:textColor="@color/textSecondary"
+         />
+    <TextView
+        android:id="@+id/sl_courseSem"
+        android:layout_gravity="center"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="semester"
+        android:textSize="16sp"
+        android:textColor="@color/textSecondary"
+         />
     <ImageView
-        android:id="@+id/solution"
+        android:id="@+id/up_solution"
         android:layout_width="match_parent"
         android:layout_height="450dp"
         android:src="@drawable/ic_upload"
