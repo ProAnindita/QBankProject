@@ -97,7 +97,6 @@ public class CourseAdapter extends ArrayAdapter<Course> {
 
         return convertView;
     }
-
     private void showDeleteDialog(Course course) {
         new AlertDialog.Builder(getContext())
                 .setTitle("Delete Course")
