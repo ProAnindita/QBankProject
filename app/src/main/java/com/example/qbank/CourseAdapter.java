@@ -19,6 +19,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -43,16 +45,32 @@ public class CourseAdapter extends ArrayAdapter<Course> {
 
     private static final String CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1/dp4ha5cws/image/upload";
     private static final String CLOUDINARY_UPLOAD_PRESET = "ml_default";
-    private static final int PICK_IMAGE_REQUEST = 1;
 
     private DatabaseReference databaseReference;
     private Context context;
     private Uri selectedImageUri;
+    private ImageView currentImageView;
+
+    private final ActivityResultLauncher<Intent> imagePickerLauncher;
 
     public CourseAdapter(Context context, List<Course> courses) {
         super(context, 0, courses);
         this.context = context;
         databaseReference = FirebaseDatabase.getInstance().getReference("Courses");
+
+        // Initialize ActivityResultLauncher
+        imagePickerLauncher = ((AppCompatActivity) context).registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == AppCompatActivity.RESULT_OK && result.getData() != null) {
+                        selectedImageUri = result.getData().getData();
+                        if (currentImageView != null && selectedImageUri != null) {
+                            // Display the selected image in the ImageView
+                            currentImageView.setImageURI(selectedImageUri);
+                        }
+                    }
+                }
+        );
     }
 
     @NonNull
@@ -80,123 +98,6 @@ public class CourseAdapter extends ArrayAdapter<Course> {
         return convertView;
     }
 
-    private void showUpdateDialog(Course course) {
-        View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialogue_update_course, null);
-
-        EditText editCourseId = dialogView.findViewById(R.id.editCourseId);
-        EditText editCourseName = dialogView.findViewById(R.id.editCourseName);
-        EditText editSemester = dialogView.findViewById(R.id.SemesterInput);
-        ImageView questionImageView = dialogView.findViewById(R.id.Question);
-        Button doneButton = dialogView.findViewById(R.id.doneButton);
-        Button quitButton = dialogView.findViewById(R.id.quitButton);
-
-        editCourseId.setText(course.getCourseCode());
-        editCourseName.setText(course.getCourseName());
-        editSemester.setText(course.getSemester());
-
-        // Load the current image
-        Glide.with(getContext())
-                .load(course.getImageKey())
-                .placeholder(R.drawable.ic_profile)
-                .into(questionImageView);
-
-        questionImageView.setOnClickListener(v -> openGalleryForImage());
-
-        AlertDialog dialog = new AlertDialog.Builder(getContext())
-                .setView(dialogView)
-                .setCancelable(false)
-                .create();
-
-        doneButton.setOnClickListener(v -> {
-            String newCourseName = editCourseName.getText().toString().trim();
-            String newSemester = editSemester.getText().toString().trim();
-
-            if (newCourseName.isEmpty() || newSemester.isEmpty()) {
-                Toast.makeText(getContext(), "All fields are required", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // If a new image is selected, upload it and update the image key in Firebase
-            if (selectedImageUri != null) {
-                uploadNewImageToCloudinary(course.getCourseCode(), course.getSemester(), selectedImageUri, () -> {
-                    DatabaseReference courseRef = databaseReference.child(course.getCourseCode()).child(newSemester);
-                    courseRef.child("courseName").setValue(newCourseName);
-                    courseRef.child("imageKey").setValue(selectedImageUri.toString()) // Update imageKey
-                            .addOnCompleteListener(task -> {
-                                if (task.isSuccessful()) {
-                                    course.setCourseName(newCourseName);
-                                    course.setSemester(newSemester);
-                                    notifyDataSetChanged();
-                                    Toast.makeText(getContext(), "Course updated successfully", Toast.LENGTH_SHORT).show();
-                                    dialog.dismiss();
-                                } else {
-                                    Toast.makeText(getContext(), "Failed to update course details.", Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                });
-            } else {
-                // Update fields without changing the image
-                DatabaseReference courseRef = databaseReference.child(course.getCourseCode()).child(newSemester);
-                courseRef.child("courseName").setValue(newCourseName).addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        course.setCourseName(newCourseName);
-                        course.setSemester(newSemester);
-                        notifyDataSetChanged();
-                        dialog.dismiss();
-                    } else {
-                        Toast.makeText(getContext(), "Failed to update course details.", Toast.LENGTH_SHORT).show();
-                    }
-                });
-            }
-        });
-
-        quitButton.setOnClickListener(v -> dialog.dismiss());
-
-        dialog.show();
-    }
-
-    private void openGalleryForImage() {
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("image/*");
-        ((AppCompatActivity) context).startActivityForResult(Intent.createChooser(intent, "Select Image"), PICK_IMAGE_REQUEST);
-    }
-
-    private void uploadNewImageToCloudinary(String courseId, String semester, Uri selectedImageUri, Runnable onSuccess) {
-        try {
-            Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContext().getContentResolver(), selectedImageUri);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-            String base64Image = Base64.encodeToString(baos.toByteArray(), Base64.DEFAULT);
-
-            Map<String, String> params = new HashMap<>();
-            params.put("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-            params.put("file", "data:image/jpeg;base64," + base64Image);
-
-            JsonObjectRequest request = new JsonObjectRequest(
-                    Request.Method.POST,
-                    CLOUDINARY_UPLOAD_URL,
-                    new JSONObject(params),
-                    response -> {
-                        try {
-                            String newImageUrl = response.getString("secure_url");
-                            onSuccess.run(); // Call success callback after upload
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            Toast.makeText(getContext(), "Error parsing upload response", Toast.LENGTH_SHORT).show();
-                        }
-                    },
-                    error -> Toast.makeText(getContext(), "Image upload failed: " + error.getMessage(), Toast.LENGTH_SHORT).show()
-            );
-
-            RequestQueue requestQueue = Volley.newRequestQueue(getContext());
-            requestQueue.add(request);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            Toast.makeText(getContext(), "Failed to process selected image.", Toast.LENGTH_SHORT).show();
-        }
-    }
-
     private void showDeleteDialog(Course course) {
         new AlertDialog.Builder(getContext())
                 .setTitle("Delete Course")
@@ -218,5 +119,189 @@ public class CourseAdapter extends ArrayAdapter<Course> {
                 })
                 .setNegativeButton("No", null)
                 .show();
+    }
+
+    private void showUpdateDialog(Course course) {
+        View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialogue_update_course, null);
+
+        EditText editCourseId = dialogView.findViewById(R.id.editCourseId);
+        EditText editCourseName = dialogView.findViewById(R.id.editCourseName);
+        EditText editSemester = dialogView.findViewById(R.id.SemesterInput);
+        ImageView questionImageView = dialogView.findViewById(R.id.Question);
+        Button doneButton = dialogView.findViewById(R.id.doneButton);
+        Button quitButton = dialogView.findViewById(R.id.quitButton);
+
+        editCourseId.setText(course.getCourseCode());
+        editCourseName.setText(course.getCourseName());
+        editSemester.setText(course.getSemester());
+
+        // Load the current image
+        Glide.with(getContext())
+                .load(course.getImageKey())
+                .placeholder(R.drawable.ic_profile)
+                .into(questionImageView);
+
+        // Set the current ImageView for image selection
+        questionImageView.setOnClickListener(v -> {
+            currentImageView = questionImageView;
+            openGalleryForImage();
+        });
+
+        AlertDialog dialog = new AlertDialog.Builder(getContext())
+                .setView(dialogView)
+                .setCancelable(false)
+                .create();
+
+        doneButton.setOnClickListener(v -> {
+            String newCourseId = editCourseId.getText().toString().trim();
+            String newCourseName = editCourseName.getText().toString().trim();
+            String newSemester = editSemester.getText().toString().trim();
+
+            if (TextUtils.isEmpty(newCourseId) || TextUtils.isEmpty(newCourseName) || TextUtils.isEmpty(newSemester)) {
+                Toast.makeText(getContext(), "All fields are required", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // If a new image is selected, upload it to Cloudinary first
+            if (selectedImageUri != null) {
+                uploadNewImageToCloudinary(selectedImageUri, newImageUrl -> {
+                    // Set the updated image URL
+                    course.setImageKey(newImageUrl);
+
+                    // Check if the course ID has changed
+                    if (!course.getCourseCode().equals(newCourseId)) {
+                        // Create a new instance under the updated course ID
+                        DatabaseReference newCourseRef = databaseReference.child(newCourseId).child(newSemester);
+                        newCourseRef.child("courseName").setValue(newCourseName);
+                        newCourseRef.child("imageKey").setValue(newImageUrl).addOnCompleteListener(task -> {
+                            if (task.isSuccessful()) {
+                                // Delete the old course ID
+                                DatabaseReference oldCourseRef = databaseReference.child(course.getCourseCode());
+                                oldCourseRef.removeValue().addOnCompleteListener(deleteTask -> {
+                                    if (deleteTask.isSuccessful()) {
+                                        course.setCourseCode(newCourseId);
+                                        course.setCourseName(newCourseName);
+                                        course.setSemester(newSemester);
+                                        notifyDataSetChanged();
+                                        Toast.makeText(getContext(), "Course and image updated successfully!", Toast.LENGTH_SHORT).show();
+                                        dialog.dismiss();
+                                    } else {
+                                        Toast.makeText(getContext(), "Failed to delete old course instance.", Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            } else {
+                                Toast.makeText(getContext(), "Failed to create new course instance.", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    } else {
+                        // Update fields under the same course ID
+                        DatabaseReference courseRef = databaseReference.child(course.getCourseCode()).child(newSemester);
+                        courseRef.child("courseName").setValue(newCourseName);
+                        courseRef.child("imageKey").setValue(newImageUrl).addOnCompleteListener(task -> {
+                            if (task.isSuccessful()) {
+                                course.setCourseName(newCourseName);
+                                course.setSemester(newSemester);
+                                notifyDataSetChanged();
+                                Toast.makeText(getContext(), "Course and image updated successfully!", Toast.LENGTH_SHORT).show();
+                                dialog.dismiss();
+                            } else {
+                                Toast.makeText(getContext(), "Failed to update course details.", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
+            } else {
+                // Handle case where no new image is selected
+                if (!course.getCourseCode().equals(newCourseId)) {
+                    // Create a new instance under the updated course ID
+                    DatabaseReference newCourseRef = databaseReference.child(newCourseId).child(newSemester);
+                    newCourseRef.child("courseName").setValue(newCourseName);
+                    newCourseRef.child("imageKey").setValue(course.getImageKey()).addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            // Delete the old course ID
+                            DatabaseReference oldCourseRef = databaseReference.child(course.getCourseCode());
+                            oldCourseRef.removeValue().addOnCompleteListener(deleteTask -> {
+                                if (deleteTask.isSuccessful()) {
+                                    course.setCourseCode(newCourseId);
+                                    course.setCourseName(newCourseName);
+                                    course.setSemester(newSemester);
+                                    notifyDataSetChanged();
+                                    Toast.makeText(getContext(), "Course updated successfully!", Toast.LENGTH_SHORT).show();
+                                    dialog.dismiss();
+                                } else {
+                                    Toast.makeText(getContext(), "Failed to delete old course instance.", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        } else {
+                            Toast.makeText(getContext(), "Failed to create new course instance.", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                } else {
+                    // Update fields without changing the image
+                    DatabaseReference courseRef = databaseReference.child(course.getCourseCode()).child(newSemester);
+                    courseRef.child("courseName").setValue(newCourseName).addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            course.setCourseName(newCourseName);
+                            course.setSemester(newSemester);
+                            notifyDataSetChanged();
+                            Toast.makeText(getContext(), "Course updated successfully!", Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        } else {
+                            Toast.makeText(getContext(), "Failed to update course details.", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            }
+        });
+
+        quitButton.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
+    }
+
+    private void openGalleryForImage() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("image/*");
+        imagePickerLauncher.launch(Intent.createChooser(intent, "Select Image"));
+    }
+
+    private void uploadNewImageToCloudinary(Uri selectedImageUri, OnImageUploadCompleteListener listener) {
+        try {
+            Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContext().getContentResolver(), selectedImageUri);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+            String base64Image = Base64.encodeToString(baos.toByteArray(), Base64.DEFAULT);
+
+            Map<String, String> params = new HashMap<>();
+            params.put("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+            params.put("file", "data:image/jpeg;base64," + base64Image);
+
+            JsonObjectRequest request = new JsonObjectRequest(
+                    Request.Method.POST,
+                    CLOUDINARY_UPLOAD_URL,
+                    new JSONObject(params),
+                    response -> {
+                        try {
+                            String newImageUrl = response.getString("secure_url");
+                            listener.onSuccess(newImageUrl);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            Toast.makeText(getContext(), "Error parsing upload response", Toast.LENGTH_SHORT).show();
+                        }
+                    },
+                    error -> Toast.makeText(getContext(), "Image upload failed: " + error.getMessage(), Toast.LENGTH_SHORT).show()
+            );
+
+            RequestQueue requestQueue = Volley.newRequestQueue(getContext());
+            requestQueue.add(request);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            Toast.makeText(getContext(), "Failed to process selected image.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public interface OnImageUploadCompleteListener {
+        void onSuccess(String imageUrl);
     }
 }
