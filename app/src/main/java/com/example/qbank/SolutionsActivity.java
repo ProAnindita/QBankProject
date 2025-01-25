@@ -66,9 +66,9 @@ public class SolutionsActivity extends AppCompatActivity {
     }
 
     private void loadSolutionsFromFirebase() {
-        DatabaseReference coursesRef = FirebaseDatabase.getInstance().getReference("Courses");
+        DatabaseReference solutionsRef = FirebaseDatabase.getInstance().getReference("Solutions");
 
-        coursesRef.addListenerForSingleValueEvent(new ValueEventListener() {
+        solutionsRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 solutionList.clear();
@@ -76,14 +76,11 @@ public class SolutionsActivity extends AppCompatActivity {
                     String courseId = courseSnapshot.getKey();
                     for (DataSnapshot semesterSnapshot : courseSnapshot.getChildren()) {
                         String courseSemester = semesterSnapshot.getKey();
-                        String courseName = semesterSnapshot.child("courseName").getValue(String.class);
-
-                        for (DataSnapshot solutionSnapshot : semesterSnapshot.child("Solutions").getChildren()) {
+                        for (DataSnapshot solutionSnapshot : semesterSnapshot.getChildren()) {
                             Solution solution = solutionSnapshot.getValue(Solution.class);
                             if (solution != null) {
                                 solution.setCourseId(courseId);
                                 solution.setCourseSemester(courseSemester);
-                                solution.setCourseName(courseName);
 
                                 // Set the solutionId from the snapshot key
                                 solution.setSolutionId(solutionSnapshot.getKey());
@@ -102,6 +99,7 @@ public class SolutionsActivity extends AppCompatActivity {
             }
         });
     }
+
 
     private void filterSolutionsByCourse(String query) {
         filteredSolutionList.clear(); // Clear the filtered list

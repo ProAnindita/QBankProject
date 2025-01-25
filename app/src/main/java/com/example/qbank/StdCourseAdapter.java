@@ -186,11 +186,10 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
         SharedPreferences sharedPreferences = getContext().getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE);
         String uploaderEmail = sharedPreferences.getString("userEmail", "Unknown Email");
 
-        // Reference to the Solutions node under the specific course and semester
-        DatabaseReference solutionsRef = FirebaseDatabase.getInstance().getReference("Courses")
+        // Reference to the new Solutions node
+        DatabaseReference solutionsRef = FirebaseDatabase.getInstance().getReference("Solutions")
                 .child(course.getCourseCode())
-                .child(course.getSemester())
-                .child("Solutions");
+                .child(course.getSemester());
 
         // Create a new node for this solution
         DatabaseReference newSolutionRef = solutionsRef.push();
@@ -209,6 +208,7 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
             }
         });
     }
+
 
     private void showQuestionDialog(String courseCode, String semester) {
         View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_view_question, null);
