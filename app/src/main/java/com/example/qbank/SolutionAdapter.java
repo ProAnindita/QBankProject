@@ -71,10 +71,10 @@ public class SolutionAdapter extends RecyclerView.Adapter<SolutionAdapter.Soluti
         // Fetch and load profile image from Firebase users table
         fetchProfileImage(solution.getUploaderEmail(), holder.profileImage);
 
-        holder.solutionImage.setOnClickListener(v -> showSolutionDialog(solution.getImageUrl(), solution.getSolutionId()));
+        holder.solutionImage.setOnClickListener(v -> showSolutionDialog(solution.getImageUrl(), solution.getCourseId(), solution.getCourseSemester(), solution.getSolutionId()));
     }
 
-    private void showSolutionDialog(String imageUrl, String solutionId) {
+    private void showSolutionDialog(String imageUrl, String courseId, String semester, String solutionId) {
         if (solutionId == null || solutionId.isEmpty()) {
             Toast.makeText(context, "Invalid solution ID. Please try again.", Toast.LENGTH_SHORT).show();
             return;
@@ -92,73 +92,54 @@ public class SolutionAdapter extends RecyclerView.Adapter<SolutionAdapter.Soluti
         Button downloadButton = dialogView.findViewById(R.id.downloadButton);
         RatingBar ratingBar = dialogView.findViewById(R.id.ratingBar);
         Button postButton = dialogView.findViewById(R.id.rateDoneButton);
+
+        // Set up the post button for submitting ratings
         postButton.setOnClickListener(v -> {
             float rating = ratingBar.getRating();
             if (rating > 0) { // Ensure a valid rating is provided
-                saveRatingToFirebase(solutionId, rating);
+                saveRatingToFirebase(courseId, semester, solutionId, rating);
                 Toast.makeText(context, "Rating submitted!", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
             } else {
                 Toast.makeText(context, "Please select a rating before posting.", Toast.LENGTH_SHORT).show();
             }
         });
-        // Handle "Rating Bar" changes
-//        ratingBar.setOnRatingBarChangeListener((ratingBar1, rating, fromUser) -> {
-//            if (fromUser) {
-//                saveRatingToFirebase(solutionId, rating);
-//            }
-//        });
-
 
         // Handle "Download" button click
-        downloadButton.setOnClickListener(v -> downloadImage(imageUrl));
+        downloadButton.setOnClickListener(v -> {
+            if (imageUrl != null && !imageUrl.isEmpty()) {
+                downloadImage(imageUrl);
+            } else {
+                Toast.makeText(context, "Image URL is not available.", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         // Show the dialog
         dialog.show();
     }
 
-    private void saveRatingToFirebase(String solutionId, float rating) {
+    private void saveRatingToFirebase(String courseId, String semester, String solutionId, float rating) {
         if (solutionId == null || solutionId.isEmpty()) {
             Toast.makeText(context, "Invalid solution ID. Cannot save rating.", Toast.LENGTH_SHORT).show();
             return;
         }
 
         SharedPreferences sharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE);
-        String userEmail = sharedPreferences.getString("userEmail", "Unknown Email");
+        String userEmail = sharedPreferences.getString("userEmail", "Unknown Email").replace(".", ",");
 
-        // Find the correct path to the solution in the Courses structure
-        DatabaseReference coursesRef = FirebaseDatabase.getInstance().getReference("Courses");
-        coursesRef.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                for (DataSnapshot courseSnapshot : snapshot.getChildren()) {
-                    for (DataSnapshot semesterSnapshot : courseSnapshot.getChildren()) {
-                        DataSnapshot solutionsSnapshot = semesterSnapshot.child("Solutions");
-                        if (solutionsSnapshot.hasChild(solutionId)) {
-                            DatabaseReference ratingsRef = solutionsSnapshot.child(solutionId).getRef().child("ratings");
+        DatabaseReference solutionRef = FirebaseDatabase.getInstance()
+                .getReference("Solutions")
+                .child(courseId)
+                .child(semester)
+                .child(solutionId);
 
-                            // Save the rating under the user's email
-                            ratingsRef.child(userEmail.replace(".", ",")).setValue(rating).addOnCompleteListener(task -> {
-                                if (task.isSuccessful()) {
-                                    recalculateAverageRating(solutionsSnapshot.child(solutionId).getRef());
-                                    Toast.makeText(context, "Rating saved!", Toast.LENGTH_SHORT).show();
-                                } else {
-                                    Toast.makeText(context, "Failed to save rating.", Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                            return; // Exit after finding the solution
-                        }
-
-                    }
-                }
-
-                // If solutionId not found
-                Toast.makeText(context, "Solution not found. Please try again.", Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(context, "Failed to access database.", Toast.LENGTH_SHORT).show();
+        // Save the rating under the user's email
+        solutionRef.child("ratings").child(userEmail).setValue(rating).addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                recalculateAverageRating(solutionRef);
+                Toast.makeText(context, "Rating saved!", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(context, "Failed to save rating.", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -231,7 +212,7 @@ public class SolutionAdapter extends RecyclerView.Adapter<SolutionAdapter.Soluti
                         // Load profile image into the ImageView using Glide
                         Glide.with(context)
                                 .load(profileImageUrl)
-                                .placeholder(R.drawable.ic_profile) // Default placeholder image
+                                .placeholder(R.drawable.ic_profile)
                                 .into(profileImageView);
                     }
                 }
@@ -239,7 +220,7 @@ public class SolutionAdapter extends RecyclerView.Adapter<SolutionAdapter.Soluti
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                // Handle errors if needed
+                Log.e("SolutionAdapter", "Error fetching profile image: " + error.getMessage());
             }
         });
     }
