@@ -3,6 +3,7 @@ package com.example.qbank;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -177,13 +178,26 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
     }
 
     private void saveImageUrlToFirebase(Course course, String imageUrl) {
+        // Retrieve the uploader's email from SharedPreferences
+        SharedPreferences sharedPreferences = getContext().getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE);
+        String uploaderEmail = sharedPreferences.getString("userEmail", "Unknown Email");
+
+        // Reference to the Solutions node under the specific course and semester
         DatabaseReference solutionsRef = FirebaseDatabase.getInstance().getReference("Courses")
                 .child(course.getCourseCode())
                 .child(course.getSemester())
                 .child("Solutions");
 
+        // Create a new node for this solution
         DatabaseReference newSolutionRef = solutionsRef.push();
-        newSolutionRef.setValue(imageUrl).addOnCompleteListener(task -> {
+
+        // Create a map to store image URL and uploader email
+        Map<String, String> solutionData = new HashMap<>();
+        solutionData.put("imageUrl", imageUrl);
+        solutionData.put("uploaderEmail", uploaderEmail);
+
+        // Save the data in Firebase
+        newSolutionRef.setValue(solutionData).addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
                 Toast.makeText(getContext(), "Solution uploaded successfully!", Toast.LENGTH_SHORT).show();
             } else {

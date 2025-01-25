@@ -46,6 +46,7 @@ public class HomeActivity extends AppCompatActivity {
     private static final int PICK_IMAGE_REQUEST = 1;
 
     private Button btnSignOut;
+    private Button gotoSol;
     private EditText etStdSearch;
     private ListView stdCourseListView;
     private ImageView stdProfileImageView;
@@ -66,6 +67,7 @@ public class HomeActivity extends AppCompatActivity {
         // Initialize Views
         btnSignOut = findViewById(R.id.buttonSignOut);
         etStdSearch = findViewById(R.id.et_std_search);
+        gotoSol= findViewById(R.id.btnGoToSltn);
         // Add this inside the onCreate method, after initializing etStdSearch
         etStdSearch.addTextChangedListener(new TextWatcher() {
             @Override
@@ -113,6 +115,11 @@ public class HomeActivity extends AppCompatActivity {
         // Handle Profile Picture Click
         stdProfileImageView.setOnClickListener(v -> openProfileUploadDialog(userEmail));
 
+        gotoSol.setOnClickListener(v->{
+            Intent intent = new Intent(HomeActivity.this, SolutionsActivity.class);
+            startActivity(intent);
+            finish();
+        });
         // Handle Sign Out
         btnSignOut.setOnClickListener(v -> {
             SharedPreferences.Editor editor = sharedPreferences.edit();
