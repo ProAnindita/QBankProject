@@ -10,6 +10,8 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -30,6 +32,8 @@ public class AdminActivity extends AppCompatActivity {
     private DatabaseReference databaseReference;
     private ArrayList<Course> courseList;
     private CourseAdapter courseAdapter;
+
+    private ActivityResultLauncher<Intent> activityResultLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +63,19 @@ public class AdminActivity extends AppCompatActivity {
         courseAdapter = new CourseAdapter(this, courseList);
         courseListView.setAdapter(courseAdapter);
 
+        // Initialize ActivityResultLauncher
+        activityResultLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        // Handle the result if needed
+                        Toast.makeText(AdminActivity.this, "Activity Result Handled", Toast.LENGTH_SHORT).show();
+                        // Reload courses if needed
+                        loadCoursesFromFirebase();
+                    }
+                }
+        );
+
         // Load all courses initially
         loadCoursesFromFirebase();
 
@@ -76,10 +93,10 @@ public class AdminActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {}
         });
 
-        // Navigate to AddCourseActivity
+        // Navigate to AddCourseActivity using ActivityResultLauncher
         goToAddCourseButton.setOnClickListener(v -> {
             Intent intent = new Intent(AdminActivity.this, AddCourseActivity.class);
-            startActivity(intent);
+            activityResultLauncher.launch(intent);
         });
 
         // Admin sign-out
@@ -132,9 +149,8 @@ public class AdminActivity extends AppCompatActivity {
         }
 
         // Update the adapter with the filtered list
-        courseAdapter = new CourseAdapter(this, filteredCourses);
-        courseListView.setAdapter(courseAdapter);
+        courseAdapter.clear();
+        courseAdapter.addAll(filteredCourses);
         courseAdapter.notifyDataSetChanged();
     }
-
 }
