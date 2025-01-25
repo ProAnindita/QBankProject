@@ -22,17 +22,29 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.CustomTarget;
 import com.bumptech.glide.request.transition.Transition;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class StdCourseAdapter extends ArrayAdapter<Course> {
-    private ActivityResultLauncher<Intent> activityResultLauncher;
+    private final ActivityResultLauncher<Intent> activityResultLauncher;
     private Uri selectedImageUri;
     private ImageView solutionImageView;
 
@@ -47,12 +59,13 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
                         if (result.getResultCode() == AppCompatActivity.RESULT_OK && result.getData() != null) {
                             selectedImageUri = result.getData().getData();
                             if (solutionImageView != null) {
-                                // Update the ImageView with the selected image URI
                                 solutionImageView.setImageURI(selectedImageUri);
                             }
                         }
                     }
             );
+        } else {
+            throw new IllegalStateException("Context must be an instance of AppCompatActivity");
         }
     }
 
@@ -112,8 +125,7 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
         // Handle upload button click
         uploadSolutionButton.setOnClickListener(v -> {
             if (selectedImageUri != null) {
-                Toast.makeText(getContext(), "Image selected successfully!", Toast.LENGTH_SHORT).show();
-                dialog.dismiss();
+                uploadImageToCloudinary(course, dialog);
             } else {
                 Toast.makeText(getContext(), "Please Pick an image", Toast.LENGTH_SHORT).show();
             }
@@ -121,6 +133,63 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
         quitButton.setOnClickListener(v -> dialog.dismiss());
 
         dialog.show();
+    }
+
+    private void uploadImageToCloudinary(Course course, AlertDialog dialog) {
+        try {
+            InputStream inputStream = getContext().getContentResolver().openInputStream(selectedImageUri);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] buffer = new byte[1024];
+            int len;
+            while ((len = inputStream.read(buffer)) != -1) {
+                baos.write(buffer, 0, len);
+            }
+            String base64Image = android.util.Base64.encodeToString(baos.toByteArray(), android.util.Base64.DEFAULT);
+
+            Map<String, String> params = new HashMap<>();
+            params.put("upload_preset", "ml_default");
+            params.put("file", "data:image/jpeg;base64," + base64Image);
+
+            JsonObjectRequest request = new JsonObjectRequest(
+                    Request.Method.POST,
+                    "https://api.cloudinary.com/v1_1/dp4ha5cws/image/upload",
+                    new JSONObject(params),
+                    response -> {
+                        try {
+                            String imageUrl = response.getString("secure_url");
+                            saveImageUrlToFirebase(course, imageUrl);
+                            dialog.dismiss();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            Toast.makeText(getContext(), "Image upload successful, but failed to save URL.", Toast.LENGTH_SHORT).show();
+                        }
+                    },
+                    error -> Toast.makeText(getContext(), "Image upload failed.", Toast.LENGTH_SHORT).show()
+            );
+
+            RequestQueue requestQueue = Volley.newRequestQueue(getContext());
+            requestQueue.add(request);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(getContext(), "Failed to process image.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void saveImageUrlToFirebase(Course course, String imageUrl) {
+        DatabaseReference solutionsRef = FirebaseDatabase.getInstance().getReference("Courses")
+                .child(course.getCourseCode())
+                .child(course.getSemester())
+                .child("Solutions");
+
+        DatabaseReference newSolutionRef = solutionsRef.push();
+        newSolutionRef.setValue(imageUrl).addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                Toast.makeText(getContext(), "Solution uploaded successfully!", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(getContext(), "Failed to save solution in Firebase.", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void showQuestionDialog(String imageUrl) {
@@ -142,7 +211,6 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
 
         // Handle "Download" button click
         downloadButton.setOnClickListener(v -> downloadImage(imageUrl));
-        // Handle "Quit" button click
         quitButton.setOnClickListener(v -> dialog.dismiss());
 
         dialog.show();
@@ -156,7 +224,7 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
                     @Override
                     public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
                         try {
-                            String fileName = "QuestionImage_" + System.currentTimeMillis() + ".jpg";
+                            String fileName = "SolutionImage_" + System.currentTimeMillis() + ".jpg";
                             File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
                             File file = new File(downloadsDir, fileName);
 
@@ -173,8 +241,7 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
                     }
 
                     @Override
-                    public void onLoadCleared(@Nullable Drawable placeholder) {
-                        // Handle placeholder if needed
-                    }
+                    public void onLoadCleared(@Nullable Drawable placeholder) {}
                 });
-    }}
+    }
+}
