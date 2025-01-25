@@ -7,18 +7,23 @@ public class Solution {
     private String courseId;
     private String courseName;
     private String courseSemester;
+    private double averageRating; // Add averageRating property
+
+    private String solutionId; // Add solutionId if not already present
 
     // Default constructor for Firebase
     public Solution() {}
 
     // Constructor to initialize all fields
-    public Solution(String imageUrl, String uploaderEmail, String timestamp, String courseId, String courseName, String courseSemester) {
+    public Solution(String imageUrl, String uploaderEmail, String timestamp, String courseId, String courseName, String courseSemester, double averageRating, String solutionId) {
         this.imageUrl = imageUrl;
         this.uploaderEmail = uploaderEmail;
         this.timestamp = timestamp;
         this.courseId = courseId;
         this.courseName = courseName;
         this.courseSemester = courseSemester;
+        this.averageRating = averageRating;
+        this.solutionId = solutionId;
     }
 
     // Getters and Setters
@@ -68,5 +73,21 @@ public class Solution {
 
     public void setCourseSemester(String courseSemester) {
         this.courseSemester = courseSemester;
+    }
+
+    public double getAverageRating() {
+        return averageRating;
+    }
+
+    public void setAverageRating(double averageRating) {
+        this.averageRating = averageRating;
+    }
+
+    public String getSolutionId() {
+        return solutionId;
+    }
+
+    public void setSolutionId(String solutionId) {
+        this.solutionId = solutionId;
     }
 }

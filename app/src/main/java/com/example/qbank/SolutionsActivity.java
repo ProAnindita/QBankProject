@@ -83,6 +83,9 @@ public class SolutionsActivity extends AppCompatActivity {
                                 solution.setCourseId(courseId);
                                 solution.setCourseSemester(courseSemester);
                                 solution.setCourseName(courseName);
+
+                                // Set the solutionId from the snapshot key
+                                solution.setSolutionId(solutionSnapshot.getKey());
                                 solutionList.add(solution);
                             }
                         }
