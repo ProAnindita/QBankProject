@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp"
+    android:padding="10dp"
     android:background="@android:color/white"
     android:layout_margin="8dp">
 
@@ -37,7 +37,7 @@
     </LinearLayout>
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="28dp"
+        android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:layout_marginBottom="8dp">
@@ -49,17 +49,17 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:singleLine="true"
-            android:text="CourseId"
+            android:text="CSE-5434"
             android:layout_marginRight="15dp"
             android:textColor="@android:color/black"
             android:textSize="16sp" />
 
         <TextView
             android:id="@+id/Coursename"
-            android:layout_width="wrap_content"
+            android:layout_width="130dp"
             android:layout_height="wrap_content"
             android:layout_marginRight="15dp"
-            android:text="Course name"
+            android:text="Coursekeame"
             android:textColor="@color/textSecondary"
             android:textSize="16sp" />
         <TextView
@@ -67,22 +67,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginRight="15dp"
-            android:text="Course semester"
+            android:text="Spring 2023"
             android:textColor="@color/textSecondary"
             android:textSize="16sp" />
-        <TextView
-            android:id="@+id/rating"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="4"
-            android:textColor="@color/black"
-            android:textSize="20sp" />
-        <ImageView
-            android:id="@+id/rate"
-            android:layout_width="match_parent"
-            android:layout_height="26dp"
-            android:src="@drawable/star"
-             />
+
 
 
     </LinearLayout>
@@ -94,6 +82,24 @@
         android:scaleType="centerCrop"
         android:src="@drawable/ic_profile"
         android:layout_marginBottom="8dp" />
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="right">
+        <TextView
+            android:id="@+id/rating"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="4"
+            android:textColor="@color/black"
+            android:textSize="20sp" />
+        <ImageView
+            android:id="@+id/rate"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/star"
+            />
+    </LinearLayout>
 
 
 
