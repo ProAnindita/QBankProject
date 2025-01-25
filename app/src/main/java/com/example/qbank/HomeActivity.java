@@ -40,6 +40,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class HomeActivity extends AppCompatActivity {
@@ -56,6 +57,8 @@ public class HomeActivity extends AppCompatActivity {
     private DatabaseReference coursesReference;
     private DatabaseReference usersReference;
     private ArrayList<Course> courseList;
+    private List<Course> filteredCourseList = new ArrayList<>();
+
     private StdCourseAdapter courseAdapter;
 
     private Uri selectedImageUri;
@@ -72,20 +75,18 @@ public class HomeActivity extends AppCompatActivity {
         // Add this inside the onCreate method, after initializing etStdSearch
         etStdSearch.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                // No action needed here
-            }
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                filterCourses(s.toString()); // Call filter method on text change
+                filterCourses(s.toString().trim());
             }
 
             @Override
-            public void afterTextChanged(Editable s) {
-                // No action needed here
-            }
+            public void afterTextChanged(Editable s) {}
         });
+
+
 
 // Add this method to handle course filtering
 
@@ -153,47 +154,41 @@ public class HomeActivity extends AppCompatActivity {
         });
     }
     private void filterCourses(String query) {
-        ArrayList<Course> filteredCourses = new ArrayList<>();
+    // Use the CourseFilter class to handle filtering logic
+    CourseFilter.loadAndFilterCourses(query, filteredList -> {
+        courseList.clear();
+        courseList.addAll(filteredList);
+        courseAdapter.notifyDataSetChanged(); // Notify the adapter to refresh the ListView
+    });
+}
 
-        if (query.isEmpty()) {
-            filteredCourses.addAll(courseList); // Show all courses if search is empty
-        } else {
-            for (Course course : courseList) {
-                if (course.getCourseName().toLowerCase().contains(query.toLowerCase()) ||
-                        course.getCourseCode().toLowerCase().contains(query.toLowerCase())) {
-                    filteredCourses.add(course); // Match course name or code
-                }
-            }
-        }
 
-        courseAdapter.clear();
-        courseAdapter.addAll(filteredCourses);
-        courseAdapter.notifyDataSetChanged();
-    }
+
+
 
     private void loadCourses() {
-        coursesReference.addValueEventListener(new ValueEventListener() {
+        coursesReference.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                courseList.clear();
+                courseList.clear(); // Clear the current list
                 for (DataSnapshot courseIdSnapshot : snapshot.getChildren()) {
                     String courseId = courseIdSnapshot.getKey();
                     for (DataSnapshot semesterSnapshot : courseIdSnapshot.getChildren()) {
-                        // Fetch courseName manually to avoid crashes
-                        String courseName = semesterSnapshot.child("courseName").getValue(String.class);
-                        String semester = semesterSnapshot.getKey();
-                        if (courseName != null) {
+                        // Ensure valid course data is present
+                        if (semesterSnapshot.hasChild("courseName")) {
+                            String courseName = semesterSnapshot.child("courseName").getValue(String.class);
+                            String semester = semesterSnapshot.getKey();
+
                             Course course = new Course();
-                            course.setCourseName(courseName);
                             course.setCourseCode(courseId);
+                            course.setCourseName(courseName);
                             course.setSemester(semester);
+
                             courseList.add(course);
-                        } else {
-                            Log.e("CourseLoading", "Invalid or missing courseName in Firebase.");
                         }
                     }
                 }
-                courseAdapter.notifyDataSetChanged(); // Refresh the ListView
+                courseAdapter.notifyDataSetChanged(); // Notify adapter of data changes
             }
 
             @Override
@@ -202,6 +197,7 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
     }
+
 
 
     private void openProfileUploadDialog(String userEmail) {
