@@ -9,8 +9,7 @@ public class Solution {
     private String courseSemester;
 
     // Default constructor for Firebase
-    public Solution() {
-    }
+    public Solution() {}
 
     // Constructor to initialize all fields
     public Solution(String imageUrl, String uploaderEmail, String timestamp, String courseId, String courseName, String courseSemester) {

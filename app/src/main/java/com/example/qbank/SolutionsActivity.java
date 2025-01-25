@@ -37,11 +37,12 @@ public class SolutionsActivity extends AppCompatActivity {
         solutionsRecyclerView = findViewById(R.id.solutionsRecyclerView);
         searchSolutionsInput = findViewById(R.id.searchSolutionsInput);
 
-        // Initialize lists and adapter
+        // Initialize lists
         solutionList = new ArrayList<>();
         filteredSolutionList = new ArrayList<>();
 
-        solutionAdapter = new SolutionAdapter(this, filteredSolutionList);
+        // Set up RecyclerView and Adapter
+        solutionAdapter = new SolutionAdapter(this, filteredSolutionList); // Use filteredSolutionList for display
         solutionsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         solutionsRecyclerView.setAdapter(solutionAdapter);
 
@@ -55,7 +56,7 @@ public class SolutionsActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                filterSolutionsByEmail(s.toString());
+                filterSolutionsByCourse(s.toString());
             }
 
             @Override
@@ -64,26 +65,31 @@ public class SolutionsActivity extends AppCompatActivity {
     }
 
     private void loadSolutionsFromFirebase() {
-        DatabaseReference solutionsRef = FirebaseDatabase.getInstance().getReference("Courses");
+        DatabaseReference coursesRef = FirebaseDatabase.getInstance().getReference("Courses");
 
-        solutionsRef.addListenerForSingleValueEvent(new ValueEventListener() {
+        coursesRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 solutionList.clear();
                 for (DataSnapshot courseSnapshot : snapshot.getChildren()) {
+                    String courseId = courseSnapshot.getKey();
                     for (DataSnapshot semesterSnapshot : courseSnapshot.getChildren()) {
-                        DataSnapshot solutionsNode = semesterSnapshot.child("Solutions");
-                        for (DataSnapshot solutionSnapshot : solutionsNode.getChildren()) {
+                        String courseSemester = semesterSnapshot.getKey();
+                        String courseName = semesterSnapshot.child("courseName").getValue(String.class);
+
+                        for (DataSnapshot solutionSnapshot : semesterSnapshot.child("Solutions").getChildren()) {
                             Solution solution = solutionSnapshot.getValue(Solution.class);
                             if (solution != null) {
+                                solution.setCourseId(courseId);
+                                solution.setCourseSemester(courseSemester);
+                                solution.setCourseName(courseName);
                                 solutionList.add(solution);
                             }
                         }
                     }
                 }
-                filteredSolutionList.clear();
-                filteredSolutionList.addAll(solutionList);
-                solutionAdapter.notifyDataSetChanged();
+
+                filterSolutionsByCourse(""); // Display all solutions initially
             }
 
             @Override
@@ -93,13 +99,20 @@ public class SolutionsActivity extends AppCompatActivity {
         });
     }
 
-    private void filterSolutionsByEmail(String email) {
-        filteredSolutionList.clear();
-        for (Solution solution : solutionList) {
-            if (solution.getUploaderEmail().toLowerCase().contains(email.toLowerCase())) {
-                filteredSolutionList.add(solution);
+    private void filterSolutionsByCourse(String query) {
+        filteredSolutionList.clear(); // Clear the filtered list
+
+        if (query.isEmpty()) {
+            filteredSolutionList.addAll(solutionList); // Show all solutions if the query is empty
+        } else {
+            for (Solution solution : solutionList) {
+                if ((solution.getCourseName() != null && solution.getCourseName().toLowerCase().contains(query.toLowerCase())) ||
+                        (solution.getCourseId() != null && solution.getCourseId().toLowerCase().contains(query.toLowerCase()))) {
+                    filteredSolutionList.add(solution); // Add matching solutions to the filtered list
+                }
             }
         }
-        solutionAdapter.notifyDataSetChanged();
+
+        solutionAdapter.notifyDataSetChanged(); // Notify adapter of data changes
     }
 }

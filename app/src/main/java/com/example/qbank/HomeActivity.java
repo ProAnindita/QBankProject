@@ -153,16 +153,20 @@ public class HomeActivity extends AppCompatActivity {
     }
     private void filterCourses(String query) {
         ArrayList<Course> filteredCourses = new ArrayList<>();
-        for (Course course : courseList) {
-            if (course.getCourseName().toLowerCase().contains(query.toLowerCase()) ||
-                    course.getCourseCode().toLowerCase().contains(query.toLowerCase())) {
-                filteredCourses.add(course); // Add matching courses to the filtered list
+
+        if (query.isEmpty()) {
+            filteredCourses.addAll(courseList); // Show all courses if search is empty
+        } else {
+            for (Course course : courseList) {
+                if (course.getCourseName().toLowerCase().contains(query.toLowerCase()) ||
+                        course.getCourseCode().toLowerCase().contains(query.toLowerCase())) {
+                    filteredCourses.add(course); // Match course name or code
+                }
             }
         }
 
-        // Update the adapter with the filtered list
-        courseAdapter = new StdCourseAdapter(this, filteredCourses);
-        stdCourseListView.setAdapter(courseAdapter);
+        courseAdapter.clear();
+        courseAdapter.addAll(filteredCourses);
         courseAdapter.notifyDataSetChanged();
     }
 

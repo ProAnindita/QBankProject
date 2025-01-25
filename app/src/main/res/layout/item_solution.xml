@@ -24,7 +24,7 @@
 
         <TextView
             android:id="@+id/userEmail"
-            android:layout_width="156dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:singleLine="true"
@@ -32,22 +32,12 @@
             android:textColor="@android:color/black"
             android:textSize="16sp" />
 
-        <TextView
-            android:id="@+id/rating"
-            android:layout_width="12dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:ellipsize="end"
-            android:singleLine="true"
-            android:text="4"
-            android:textColor="@color/textSecondary"
-            android:textSize="16sp" />
 
 
     </LinearLayout>
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="28dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:layout_marginBottom="8dp">
@@ -68,9 +58,6 @@
             android:id="@+id/Coursename"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:ellipsize="end"
-            android:singleLine="true"
             android:layout_marginRight="15dp"
             android:text="Course name"
             android:textColor="@color/textSecondary"
@@ -79,12 +66,23 @@
             android:id="@+id/semester"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:ellipsize="end"
-            android:singleLine="true"
+            android:layout_marginRight="15dp"
             android:text="Course semester"
             android:textColor="@color/textSecondary"
             android:textSize="16sp" />
+        <TextView
+            android:id="@+id/rating"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="4"
+            android:textColor="@color/black"
+            android:textSize="20sp" />
+        <ImageView
+            android:id="@+id/rate"
+            android:layout_width="match_parent"
+            android:layout_height="26dp"
+            android:src="@drawable/star"
+             />
 
 
     </LinearLayout>
@@ -97,13 +95,8 @@
         android:src="@drawable/ic_profile"
         android:layout_marginBottom="8dp" />
 
-    <TextView
-        android:id="@+id/timestamp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Submitted on: 2025-01-24 12:34"
-        android:textColor="@android:color/darker_gray"
-        android:textSize="12sp" />
+
+
 
 
 </LinearLayout>
