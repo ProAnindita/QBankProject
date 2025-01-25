@@ -10,6 +10,7 @@ import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Base64;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -178,15 +179,21 @@ public class HomeActivity extends AppCompatActivity {
                 for (DataSnapshot courseIdSnapshot : snapshot.getChildren()) {
                     String courseId = courseIdSnapshot.getKey();
                     for (DataSnapshot semesterSnapshot : courseIdSnapshot.getChildren()) {
-                        Course course = semesterSnapshot.getValue(Course.class);
-                        if (course != null) {
+                        // Fetch courseName manually to avoid crashes
+                        String courseName = semesterSnapshot.child("courseName").getValue(String.class);
+                        String semester = semesterSnapshot.getKey();
+                        if (courseName != null) {
+                            Course course = new Course();
+                            course.setCourseName(courseName);
                             course.setCourseCode(courseId);
-                            course.setSemester(semesterSnapshot.getKey());
+                            course.setSemester(semester);
                             courseList.add(course);
+                        } else {
+                            Log.e("CourseLoading", "Invalid or missing courseName in Firebase.");
                         }
                     }
                 }
-                courseAdapter.notifyDataSetChanged(); // Notify adapter to refresh the ListView
+                courseAdapter.notifyDataSetChanged(); // Refresh the ListView
             }
 
             @Override
@@ -195,6 +202,7 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
     }
+
 
     private void openProfileUploadDialog(String userEmail) {
         // Inflate the dialog layout
