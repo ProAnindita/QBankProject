@@ -1,5 +1,6 @@
 package com.example.qbank;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -118,4 +119,14 @@ public class SolutionsActivity extends AppCompatActivity {
 
         solutionAdapter.notifyDataSetChanged(); // Notify adapter of data changes
     }
+    @Override
+    public void onBackPressed() {
+        // Navigate back to HomeActivity
+        super.onBackPressed();
+        Intent intent = new Intent(SolutionsActivity.this, HomeActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish(); // Optional: Ensures the current activity is removed from the stack
+    }
+
 }

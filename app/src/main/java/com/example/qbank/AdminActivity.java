@@ -15,13 +15,8 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
-
 import java.util.ArrayList;
+import java.util.List;
 
 public class AdminActivity extends AppCompatActivity {
 
@@ -29,8 +24,7 @@ public class AdminActivity extends AppCompatActivity {
     private ListView courseListView;
     private Button adminSignOutButton, goToAddCourseButton;
 
-    private DatabaseReference databaseReference;
-    private ArrayList<Course> courseList;
+    private List<Course> courseList;
     private CourseAdapter courseAdapter;
 
     private ActivityResultLauncher<Intent> activityResultLauncher;
@@ -49,9 +43,6 @@ public class AdminActivity extends AppCompatActivity {
         }
         setContentView(R.layout.activity_admin);
 
-        // Initialize Firebase reference
-        databaseReference = FirebaseDatabase.getInstance().getReference("Courses");
-
         // Initialize views
         searchEditText = findViewById(R.id.searchEditText);
         courseListView = findViewById(R.id.courseListView);
@@ -68,16 +59,14 @@ public class AdminActivity extends AppCompatActivity {
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (result.getResultCode() == RESULT_OK) {
-                        // Handle the result if needed
-                        Toast.makeText(AdminActivity.this, "Activity Result Handled", Toast.LENGTH_SHORT).show();
-                        // Reload courses if needed
-                        loadCoursesFromFirebase();
+                        Toast.makeText(AdminActivity.this, "Course added successfully", Toast.LENGTH_SHORT).show();
+                        loadCoursesFromFirebase("");
                     }
                 }
         );
 
         // Load all courses initially
-        loadCoursesFromFirebase();
+        loadCoursesFromFirebase("");
 
         // Add search functionality
         searchEditText.addTextChangedListener(new TextWatcher() {
@@ -86,7 +75,7 @@ public class AdminActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                filterCourses(s.toString());
+                loadCoursesFromFirebase(s.toString().trim());
             }
 
             @Override
@@ -111,46 +100,11 @@ public class AdminActivity extends AppCompatActivity {
         });
     }
 
-    private void loadCoursesFromFirebase() {
-        databaseReference.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                courseList.clear();
-                for (DataSnapshot courseSnapshot : snapshot.getChildren()) {
-                    String courseId = courseSnapshot.getKey();
-                    for (DataSnapshot semesterSnapshot : courseSnapshot.getChildren()) {
-                        String semester = semesterSnapshot.getKey();
-                        Course course = semesterSnapshot.getValue(Course.class);
-                        if (course != null) {
-                            course.setCourseCode(courseId);
-                            course.setSemester(semester);
-                            courseList.add(course);
-                        }
-                    }
-                }
-                courseAdapter.notifyDataSetChanged();
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(AdminActivity.this, "Failed to load courses", Toast.LENGTH_SHORT).show();
-            }
+    private void loadCoursesFromFirebase(String query) {
+        CourseFilter.loadAndFilterCourses(query, filteredCourses -> {
+            courseList.clear();
+            courseList.addAll(filteredCourses);
+            courseAdapter.notifyDataSetChanged();
         });
-    }
-
-    private void filterCourses(String query) {
-        ArrayList<Course> filteredCourses = new ArrayList<>();
-
-        for (Course course : courseList) {
-            if (course.getCourseName().toLowerCase().contains(query.toLowerCase()) ||
-                    course.getCourseCode().toLowerCase().contains(query.toLowerCase())) {
-                filteredCourses.add(course);
-            }
-        }
-
-        // Update the adapter with the filtered list
-        courseAdapter.clear();
-        courseAdapter.addAll(filteredCourses);
-        courseAdapter.notifyDataSetChanged();
     }
 }

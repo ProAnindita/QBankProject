@@ -8,6 +8,7 @@ import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Environment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,8 +31,11 @@ import com.android.volley.toolbox.Volley;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.CustomTarget;
 import com.bumptech.glide.request.transition.Transition;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import org.json.JSONObject;
 
@@ -91,7 +95,7 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
 
         // Handle "Solution" button click
         solButton.setOnClickListener(v -> showSolutionDialog(course));
-        viewButton.setOnClickListener(v -> showQuestionDialog(course.getImageKey()));
+        viewButton.setOnClickListener(v -> showQuestionDialog(course.getCourseCode(), course.getSemester()));
 
         return convertView;
     }
@@ -206,17 +210,45 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
         });
     }
 
-    private void showQuestionDialog(String imageUrl) {
+    private void showQuestionDialog(String courseCode, String semester) {
         View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_view_question, null);
         ImageView questionImageView = dialogView.findViewById(R.id.Question);
         Button downloadButton = dialogView.findViewById(R.id.downloadButton);
         Button quitButton = dialogView.findViewById(R.id.quitButton);
 
-        // Load image using Glide
-        Glide.with(getContext())
-                .load(imageUrl)
-                .placeholder(R.drawable.ic_profile)
-                .into(questionImageView);
+        DatabaseReference databaseReference = FirebaseDatabase.getInstance()
+                .getReference("Courses")
+                .child(courseCode)
+                .child(semester);
+
+        // Fetch imageKey from Firebase
+        databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    String imageKey = snapshot.child("imageKey").getValue(String.class);
+
+                    if (imageKey != null) {
+                        // Load the image using Glide
+                        Glide.with(getContext())
+                                .load(imageKey)
+                                .placeholder(R.drawable.ic_profile)
+                                .error(R.drawable.ic_error)
+                                .into(questionImageView);
+                        questionImageView.setTag(imageKey);
+                    } else {
+                        Toast.makeText(getContext(), "Image key is null or missing.", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(getContext(), "Data not found for this course and semester.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(getContext(), "Failed to fetch data from Firebase.", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         AlertDialog dialog = new AlertDialog.Builder(getContext())
                 .setView(dialogView)
@@ -224,11 +256,21 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
                 .create();
 
         // Handle "Download" button click
-        downloadButton.setOnClickListener(v -> downloadImage(imageUrl));
+        downloadButton.setOnClickListener(v -> {
+            String imageUrl = questionImageView.getTag() != null ? questionImageView.getTag().toString() : null;
+            if (imageUrl != null) {
+                downloadImage(imageUrl);
+            } else {
+                Toast.makeText(getContext(), "Image URL is not available.", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // Handle "Quit" button click
         quitButton.setOnClickListener(v -> dialog.dismiss());
 
         dialog.show();
     }
+
 
     private void downloadImage(String imageUrl) {
         Glide.with(getContext())
@@ -238,7 +280,7 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
                     @Override
                     public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
                         try {
-                            String fileName = "SolutionImage_" + System.currentTimeMillis() + ".jpg";
+                            String fileName = "QuestionImage_" + System.currentTimeMillis() + ".jpg";
                             File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
                             File file = new File(downloadsDir, fileName);
 
@@ -255,7 +297,9 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
                     }
 
                     @Override
-                    public void onLoadCleared(@Nullable Drawable placeholder) {}
+                    public void onLoadCleared(@Nullable Drawable placeholder) {
+                        // Handle placeholder if needed
+                    }
                 });
     }
 }

@@ -30,8 +30,11 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.bumptech.glide.Glide;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import org.json.JSONObject;
 
@@ -135,12 +138,40 @@ public class CourseAdapter extends ArrayAdapter<Course> {
         editCourseId.setText(course.getCourseCode());
         editCourseName.setText(course.getCourseName());
         editSemester.setText(course.getSemester());
-
+        String courseCode=course.getCourseCode();
+        String semester=course.getSemester();
+        DatabaseReference databaseReference = FirebaseDatabase.getInstance()
+                .getReference("Courses")
+                .child(courseCode)
+                .child(semester);
         // Load the current image
-        Glide.with(getContext())
-                .load(course.getImageKey())
-                .placeholder(R.drawable.ic_profile)
-                .into(questionImageView);
+        databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    String imageKey = snapshot.child("imageKey").getValue(String.class);
+
+                    if (imageKey != null) {
+                        // Load the image using Glide
+                        Glide.with(getContext())
+                                .load(imageKey)
+                                .placeholder(R.drawable.ic_profile)
+                                .error(R.drawable.ic_error)
+                                .into(questionImageView);
+                    } else {
+                        Toast.makeText(getContext(), "Image key is null or missing.", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(getContext(), "Data not found for this course and semester.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(getContext(), "Failed to fetch data from Firebase.", Toast.LENGTH_SHORT).show();
+            }
+        });
+
 
         // Set the current ImageView for image selection
         questionImageView.setOnClickListener(v -> {
@@ -163,95 +194,38 @@ public class CourseAdapter extends ArrayAdapter<Course> {
                 return;
             }
 
-            // If a new image is selected, upload it to Cloudinary first
+            // Handle image upload if a new image is selected
             if (selectedImageUri != null) {
                 uploadNewImageToCloudinary(selectedImageUri, newImageUrl -> {
-                    // Set the updated image URL
-                    course.setImageKey(newImageUrl);
+                    // Update the image key in the "Solutions" node
+                    DatabaseReference solutionsRef = FirebaseDatabase.getInstance()
+                            .getReference("Courses")
+                            .child(course.getCourseCode())
+                            .child(course.getSemester())
+                            .child("Solutions");
 
-                    // Check if the course ID has changed
-                    if (!course.getCourseCode().equals(newCourseId)) {
-                        // Create a new instance under the updated course ID
-                        DatabaseReference newCourseRef = databaseReference.child(newCourseId).child(newSemester);
-                        newCourseRef.child("courseName").setValue(newCourseName);
-                        newCourseRef.child("imageKey").setValue(newImageUrl).addOnCompleteListener(task -> {
-                            if (task.isSuccessful()) {
-                                // Delete the old course ID
-                                DatabaseReference oldCourseRef = databaseReference.child(course.getCourseCode());
-                                oldCourseRef.removeValue().addOnCompleteListener(deleteTask -> {
-                                    if (deleteTask.isSuccessful()) {
-                                        course.setCourseCode(newCourseId);
-                                        course.setCourseName(newCourseName);
-                                        course.setSemester(newSemester);
-                                        notifyDataSetChanged();
-                                        Toast.makeText(getContext(), "Course and image updated successfully!", Toast.LENGTH_SHORT).show();
-                                        dialog.dismiss();
-                                    } else {
-                                        Toast.makeText(getContext(), "Failed to delete old course instance.", Toast.LENGTH_SHORT).show();
-                                    }
-                                });
-                            } else {
-                                Toast.makeText(getContext(), "Failed to create new course instance.", Toast.LENGTH_SHORT).show();
+                    solutionsRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            for (DataSnapshot solutionSnapshot : snapshot.getChildren()) {
+                                solutionSnapshot.getRef().child("imageUrl").setValue(newImageUrl);
                             }
-                        });
-                    } else {
-                        // Update fields under the same course ID
-                        DatabaseReference courseRef = databaseReference.child(course.getCourseCode()).child(newSemester);
-                        courseRef.child("courseName").setValue(newCourseName);
-                        courseRef.child("imageKey").setValue(newImageUrl).addOnCompleteListener(task -> {
-                            if (task.isSuccessful()) {
-                                course.setCourseName(newCourseName);
-                                course.setSemester(newSemester);
-                                notifyDataSetChanged();
-                                Toast.makeText(getContext(), "Course and image updated successfully!", Toast.LENGTH_SHORT).show();
-                                dialog.dismiss();
-                            } else {
-                                Toast.makeText(getContext(), "Failed to update course details.", Toast.LENGTH_SHORT).show();
-                            }
-                        });
-                    }
+
+                            // Proceed with updating the course details
+                            updateCourseDetails(course,newCourseId, newCourseName, newSemester, newImageUrl);
+                            dialog.dismiss();
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                            Toast.makeText(getContext(), "Failed to update image key.", Toast.LENGTH_SHORT).show();
+                        }
+                    });
                 });
             } else {
-                // Handle case where no new image is selected
-                if (!course.getCourseCode().equals(newCourseId)) {
-                    // Create a new instance under the updated course ID
-                    DatabaseReference newCourseRef = databaseReference.child(newCourseId).child(newSemester);
-                    newCourseRef.child("courseName").setValue(newCourseName);
-                    newCourseRef.child("imageKey").setValue(course.getImageKey()).addOnCompleteListener(task -> {
-                        if (task.isSuccessful()) {
-                            // Delete the old course ID
-                            DatabaseReference oldCourseRef = databaseReference.child(course.getCourseCode());
-                            oldCourseRef.removeValue().addOnCompleteListener(deleteTask -> {
-                                if (deleteTask.isSuccessful()) {
-                                    course.setCourseCode(newCourseId);
-                                    course.setCourseName(newCourseName);
-                                    course.setSemester(newSemester);
-                                    notifyDataSetChanged();
-                                    Toast.makeText(getContext(), "Course updated successfully!", Toast.LENGTH_SHORT).show();
-                                    dialog.dismiss();
-                                } else {
-                                    Toast.makeText(getContext(), "Failed to delete old course instance.", Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                        } else {
-                            Toast.makeText(getContext(), "Failed to create new course instance.", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                } else {
-                    // Update fields without changing the image
-                    DatabaseReference courseRef = databaseReference.child(course.getCourseCode()).child(newSemester);
-                    courseRef.child("courseName").setValue(newCourseName).addOnCompleteListener(task -> {
-                        if (task.isSuccessful()) {
-                            course.setCourseName(newCourseName);
-                            course.setSemester(newSemester);
-                            notifyDataSetChanged();
-                            Toast.makeText(getContext(), "Course updated successfully!", Toast.LENGTH_SHORT).show();
-                            dialog.dismiss();
-                        } else {
-                            Toast.makeText(getContext(), "Failed to update course details.", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                }
+                // Proceed with updating course details without a new image
+                updateCourseDetails( course, newCourseId, newCourseName, newSemester, course.getImageKey());
+                dialog.dismiss();
             }
         });
 
@@ -259,10 +233,56 @@ public class CourseAdapter extends ArrayAdapter<Course> {
 
         dialog.show();
     }
-    public void updateCourses(ArrayList<Course> updatedCourses) {
-        this.courseList.clear();
-        this.courseList.addAll(updatedCourses);
-        notifyDataSetChanged();
+
+    private void updateCourseDetails(Course course, String newCourseId, String newCourseName, String newSemester, String imageUrl) {
+        if (!course.getCourseCode().equals(newCourseId)) {
+            // Create a new course entry with the updated course ID
+            DatabaseReference newCourseRef = FirebaseDatabase.getInstance()
+                    .getReference("Courses")
+                    .child(newCourseId)
+                    .child(newSemester);
+
+            newCourseRef.child("courseName").setValue(newCourseName);
+            newCourseRef.child("imageKey").setValue(imageUrl).addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    // Remove the old course entry
+                    DatabaseReference oldCourseRef = FirebaseDatabase.getInstance()
+                            .getReference("Courses")
+                            .child(course.getCourseCode());
+                    oldCourseRef.removeValue().addOnCompleteListener(deleteTask -> {
+                        if (deleteTask.isSuccessful()) {
+                            course.setCourseCode(newCourseId);
+                            course.setCourseName(newCourseName);
+                            course.setSemester(newSemester);
+                            notifyDataSetChanged();
+                            Toast.makeText(getContext(), "Course updated successfully!", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(getContext(), "Failed to delete old course.", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                } else {
+                    Toast.makeText(getContext(), "Failed to update course details.", Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            // Update the existing course entry
+            DatabaseReference courseRef = FirebaseDatabase.getInstance()
+                    .getReference("Courses")
+                    .child(course.getCourseCode())
+                    .child(newSemester);
+
+            courseRef.child("courseName").setValue(newCourseName);
+            courseRef.child("imageKey").setValue(imageUrl).addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    course.setCourseName(newCourseName);
+                    course.setSemester(newSemester);
+                    notifyDataSetChanged();
+                    Toast.makeText(getContext(), "Course updated successfully!", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(getContext(), "Failed to update course details.", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
     }
 
     private void openGalleryForImage() {
