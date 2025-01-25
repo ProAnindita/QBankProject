@@ -33,6 +33,9 @@ public class SolutionAdapter extends RecyclerView.Adapter<SolutionAdapter.Soluti
     @Override
     public void onBindViewHolder(@NonNull SolutionViewHolder holder, int position) {
         Solution solution = solutionList.get(position);
+        holder.CourseId.setText(solution.getCourseId());
+        holder.CourseName.setText(solution.getCourseName());
+        holder.CourseSem.setText(solution.getCourseSemester());
 
         holder.userEmail.setText(solution.getUploaderEmail());
         holder.timestamp.setText("Submitted on: " + solution.getTimestamp());
@@ -50,11 +53,15 @@ public class SolutionAdapter extends RecyclerView.Adapter<SolutionAdapter.Soluti
     }
 
     public static class SolutionViewHolder extends RecyclerView.ViewHolder {
-        TextView userEmail, timestamp;
+        TextView userEmail, timestamp,CourseId,CourseName,CourseSem;
         ImageView solutionImage;
 
         public SolutionViewHolder(@NonNull View itemView) {
             super(itemView);
+            CourseId = itemView.findViewById(R.id.CourseId);
+            CourseName = itemView.findViewById(R.id.Coursename);
+            CourseSem = itemView.findViewById(R.id.semester);
+
             userEmail = itemView.findViewById(R.id.userEmail);
             timestamp = itemView.findViewById(R.id.timestamp);
             solutionImage = itemView.findViewById(R.id.solutionImage);
