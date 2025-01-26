@@ -9,7 +9,9 @@
         android:layout_height="wrap_content"
         android:textSize="30sp"
         android:textAlignment="center"
-        android:textColor="@color/colorPrimaryDark"
+        android:textAllCaps="true"
+
+        android:textColor="@color/colorPrimary"
         android:layout_gravity="center"
         android:layout_marginBottom="10dp"
         android:textStyle="bold"
@@ -18,7 +20,7 @@
         android:id="@+id/searchSolutionsInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Search solutions by email"
+        android:hint="Search solutions by course"
         android:padding="8dp"
         android:background="@drawable/search_edit_text_bg" />
 

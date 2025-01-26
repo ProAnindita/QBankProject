@@ -25,12 +25,14 @@
             <!-- Welcome Header -->
             <TextView
                 android:id="@+id/textViewWelcome"
+                android:textAllCaps="true"
+
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Create Your Account"
+                android:text="Create Account"
                 android:textSize="26sp"
                 android:textStyle="bold"
-                android:textColor="@color/colorPrimaryDark"
+                android:textColor="@color/colorPrimary"
                 android:layout_centerHorizontal="true" />
 
             <!-- Subtitle -->
@@ -38,7 +40,7 @@
                 android:id="@+id/textViewSubtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Join us to simplify your financial journey"
+                android:text="Join us to simplify your University journey"
                 android:textSize="14sp"
                 android:textColor="@color/textSecondary"
                 android:layout_below="@id/textViewWelcome"
@@ -198,6 +200,8 @@
                 android:layout_height="wrap_content"
                 android:text="Signup"
                 android:textStyle="bold"
+                android:textAllCaps="true"
+
                 android:layout_below="@id/textInputConfirmPassword"
                 android:layout_marginTop="24dp"
                 android:background="@drawable/rounded_button"
@@ -211,7 +215,7 @@
                 android:layout_height="wrap_content"
                 android:text="Already have an account? Login"
                 android:textSize="14sp"
-                android:textColor="@color/colorPrimaryDark"
+                android:textColor="@color/colorPrimary"
                 android:layout_below="@id/buttonSignUp"
                 android:layout_centerHorizontal="true"
                 android:layout_marginTop="20dp"

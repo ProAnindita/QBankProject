@@ -52,6 +52,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Done"
+            android:textAllCaps="true"
+
             android:layout_marginEnd="8dp"
             android:backgroundTint="#3F51B5"
             android:textColor="#FFFFFF" />
@@ -59,6 +61,8 @@
         <Button
             android:id="@+id/quitButton"
             android:layout_width="wrap_content"
+            android:textAllCaps="true"
+
             android:layout_height="wrap_content"
             android:text="Quit"
             android:backgroundTint="#F44336"

@@ -28,9 +28,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Welcome to QBank"
+                android:textAllCaps="true"
+
                 android:textSize="26sp"
                 android:textStyle="bold"
-                android:textColor="@color/colorPrimaryDark"
+                android:textColor="@color/colorPrimary"
                 android:layout_centerHorizontal="true" />
 
             <!-- Subtitle -->
@@ -38,7 +40,7 @@
                 android:id="@+id/textViewSubtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Simplify your financial journey"
+                android:text="Simplify Your University Journey"
                 android:textSize="14sp"
                 android:textColor="@color/textSecondary"
                 android:layout_below="@id/textViewWelcome"
@@ -103,6 +105,8 @@
                 android:layout_height="wrap_content"
                 android:text="Sign In"
                 android:textStyle="bold"
+                android:textAllCaps="true"
+
                 android:layout_below="@id/textInputPassword"
                 android:layout_marginTop="24dp"
                 android:background="@drawable/rounded_button"
@@ -116,6 +120,8 @@
                 android:layout_height="wrap_content"
                 android:text="Sign In as Admin"
                 android:textStyle="bold"
+                android:textAllCaps="true"
+
                 android:layout_below="@id/buttonSignIn"
                 android:layout_marginTop="16dp"
                 android:background="@drawable/rounded_button_secondary"
@@ -129,7 +135,7 @@
                 android:layout_height="wrap_content"
                 android:text="Don't have an account? Sign Up"
                 android:textSize="14sp"
-                android:textColor="@color/colorPrimaryDark"
+                android:textColor="@color/colorPrimary"
                 android:layout_below="@id/buttonAdminSignIn"
                 android:layout_centerHorizontal="true"
                 android:layout_marginTop="20dp"
