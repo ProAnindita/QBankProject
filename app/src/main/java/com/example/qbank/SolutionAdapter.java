@@ -32,6 +32,7 @@ import com.google.firebase.database.ValueEventListener;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
+import java.text.DecimalFormat;
 import java.util.List;
 
 public class SolutionAdapter extends RecyclerView.Adapter<SolutionAdapter.SolutionViewHolder> {
@@ -136,7 +137,7 @@ public class SolutionAdapter extends RecyclerView.Adapter<SolutionAdapter.Soluti
         // Save the rating under the user's email
         solutionRef.child("ratings").child(userEmail).setValue(rating).addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
-                recalculateAverageRating(solutionRef);
+                recalculateAverageRating(solutionRef); // Recalculate the average rating
                 Toast.makeText(context, "Rating saved!", Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(context, "Failed to save rating.", Toast.LENGTH_SHORT).show();
@@ -148,7 +149,7 @@ public class SolutionAdapter extends RecyclerView.Adapter<SolutionAdapter.Soluti
         solutionRef.child("ratings").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                int totalRatings = 0;
+                float totalRatings = 0;
                 int numberOfRatings = 0;
 
                 for (DataSnapshot ratingSnapshot : snapshot.getChildren()) {
@@ -159,8 +160,14 @@ public class SolutionAdapter extends RecyclerView.Adapter<SolutionAdapter.Soluti
                     }
                 }
 
-                float averageRating = numberOfRatings > 0 ? (float) totalRatings / numberOfRatings : 0;
-                solutionRef.child("averageRating").setValue(averageRating);
+                // Calculate the average rating
+                float averageRating = numberOfRatings > 0 ? totalRatings / numberOfRatings : 0;
+
+                // Truncate to 1 decimal place
+                float truncatedAverageRating = ((int) (averageRating * 10)) / 10.0f;
+
+                // Save the truncated average rating
+                solutionRef.child("averageRating").setValue(truncatedAverageRating);
             }
 
             @Override

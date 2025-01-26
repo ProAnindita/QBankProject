@@ -1,6 +1,7 @@
 package com.example.qbank;
 
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -52,7 +53,8 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
     private final ActivityResultLauncher<Intent> activityResultLauncher;
     private Uri selectedImageUri;
     private ImageView solutionImageView;
-
+    ProgressDialog progressDialog = new ProgressDialog(getContext());
+         // Show the progress dialog
     public StdCourseAdapter(Context context, List<Course> courses) {
         super(context, 0, courses);
 
@@ -141,6 +143,9 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
     }
 
     private void uploadImageToCloudinary(Course course, AlertDialog dialog) {
+        progressDialog.setMessage("Uploading image...");
+        progressDialog.setCancelable(false);
+        progressDialog.show(); // Show the progress dialog
         try {
             InputStream inputStream = getContext().getContentResolver().openInputStream(selectedImageUri);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -163,20 +168,28 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
                         try {
                             String imageUrl = response.getString("secure_url");
                             saveImageUrlToFirebase(course, imageUrl);
+                            progressDialog.dismiss();
                             dialog.dismiss();
                         } catch (Exception e) {
                             e.printStackTrace();
+                            progressDialog.dismiss();
                             Toast.makeText(getContext(), "Image upload successful, but failed to save URL.", Toast.LENGTH_SHORT).show();
                         }
                     },
-                    error -> Toast.makeText(getContext(), "Image upload failed.", Toast.LENGTH_SHORT).show()
-            );
+
+                    error -> {
+                        progressDialog.dismiss();
+                        Toast.makeText(getContext(), "Image upload failed.", Toast.LENGTH_SHORT).show();
+                    }
+                    );
 
             RequestQueue requestQueue = Volley.newRequestQueue(getContext());
             requestQueue.add(request);
 
         } catch (Exception e) {
+            progressDialog.dismiss();
             e.printStackTrace();
+
             Toast.makeText(getContext(), "Failed to process image.", Toast.LENGTH_SHORT).show();
         }
     }
@@ -217,6 +230,11 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
         Button downloadButton = dialogView.findViewById(R.id.downloadButton);
         Button quitButton = dialogView.findViewById(R.id.quitButton);
 
+        // Initialize a ProgressDialog
+        progressDialog.setMessage("Loading...");
+        progressDialog.setCancelable(false);
+        progressDialog.show();
+
         DatabaseReference databaseReference = FirebaseDatabase.getInstance()
                 .getReference("Courses")
                 .child(courseCode)
@@ -233,9 +251,10 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
                         // Load the image using Glide
                         Glide.with(getContext())
                                 .load(imageKey)
-                                .placeholder(R.drawable.ic_profile)
-                                .error(R.drawable.ic_error)
+                                .placeholder(R.drawable.ic_profile) // Default placeholder
+                                .error(R.drawable.ic_error) // Error placeholder
                                 .into(questionImageView);
+
                         questionImageView.setTag(imageKey);
                     } else {
                         Toast.makeText(getContext(), "Image key is null or missing.", Toast.LENGTH_SHORT).show();
@@ -243,11 +262,15 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
                 } else {
                     Toast.makeText(getContext(), "Data not found for this course and semester.", Toast.LENGTH_SHORT).show();
                 }
+
+                // Dismiss the progress dialog once the data is fetched
+                progressDialog.dismiss();
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
                 Toast.makeText(getContext(), "Failed to fetch data from Firebase.", Toast.LENGTH_SHORT).show();
+                progressDialog.dismiss(); // Dismiss the dialog on failure
             }
         });
 
