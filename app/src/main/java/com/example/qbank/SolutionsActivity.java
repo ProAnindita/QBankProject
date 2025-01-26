@@ -71,20 +71,19 @@ public class SolutionsActivity extends AppCompatActivity {
         solutionsRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                solutionList.clear();
+                solutionList.clear(); // Clear the list before adding new data
                 for (DataSnapshot courseSnapshot : snapshot.getChildren()) {
-                    String courseId = courseSnapshot.getKey();
+                    String courseId = courseSnapshot.getKey(); // Retrieve the CourseCode
                     for (DataSnapshot semesterSnapshot : courseSnapshot.getChildren()) {
-                        String courseSemester = semesterSnapshot.getKey();
+                        String courseSemester = semesterSnapshot.getKey(); // Retrieve the Semester
+
                         for (DataSnapshot solutionSnapshot : semesterSnapshot.getChildren()) {
                             Solution solution = solutionSnapshot.getValue(Solution.class);
                             if (solution != null) {
-                                solution.setCourseId(courseId);
-                                solution.setCourseSemester(courseSemester);
-
-                                // Set the solutionId from the snapshot key
-                                solution.setSolutionId(solutionSnapshot.getKey());
-                                solutionList.add(solution);
+                                solution.setCourseId(courseId); // Set the CourseCode
+                                solution.setCourseSemester(courseSemester); // Set the Semester
+                                solution.setSolutionId(solutionSnapshot.getKey()); // Set the unique solution ID
+                                solutionList.add(solution); // Add the solution to the list
                             }
                         }
                     }

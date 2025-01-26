@@ -188,18 +188,19 @@ public class StdCourseAdapter extends ArrayAdapter<Course> {
 
         // Reference to the new Solutions node
         DatabaseReference solutionsRef = FirebaseDatabase.getInstance().getReference("Solutions")
-                .child(course.getCourseCode())
-                .child(course.getSemester());
+                .child(course.getCourseCode()) // CourseCode level
+                .child(course.getSemester()); // Semester level
 
         // Create a new node for this solution
         DatabaseReference newSolutionRef = solutionsRef.push();
 
-        // Create a map to store image URL and uploader email
-        Map<String, String> solutionData = new HashMap<>();
-        solutionData.put("imageUrl", imageUrl);
-        solutionData.put("uploaderEmail", uploaderEmail);
+        // Create a map to store image URL, uploader email, and course name
+        Map<String, Object> solutionData = new HashMap<>();
+        solutionData.put("courseName", course.getCourseName()); // Store course name here
+        solutionData.put("imageUrl", imageUrl); // URL for the solution image
+        solutionData.put("uploaderEmail", uploaderEmail); // Uploader email
 
-        // Save the data in Firebase
+        // Save the solution data under a unique key
         newSolutionRef.setValue(solutionData).addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
                 Toast.makeText(getContext(), "Solution uploaded successfully!", Toast.LENGTH_SHORT).show();
